@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Contagem de Estoque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a1210;
+    --bg-2:#0d1815;
+    --panel:#12211d;
+    --panel-2:#182b25;
+    --line:rgba(243,237,225,0.08);
+    --line-strong:rgba(243,237,225,0.16);
+    --ink:#f3ede1;
+    --ink-dim:#93a89c;
+    --ink-faint:#5d6f66;
+    --amber:#e0a53a;
+    --amber-dim:#8a6a2d;
+    --teal:#39b39f;
+    --teal-dim:#2c6a60;
+    --rust:#cf5f45;
+    --shadow: 0 8px 30px rgba(0,0,0,0.35);
+    --footer-h: 96px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(224,165,58,0.07), transparent 45%),
+      radial-gradient(circle at 90% 20%, rgba(57,179,159,0.08), transparent 40%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:contain;
+    min-height:100%;
+  }
+  ::selection{background:var(--amber); color:#1a1208;}
+
+  .display{font-family:'Bebas Neue',sans-serif; letter-spacing:0.04em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ---------- HEADER ---------- */
+  header.top{
+    position:sticky; top:0; z-index:40;
+    background:linear-gradient(180deg, var(--bg-2) 78%, transparent);
+    backdrop-filter:blur(10px);
+    padding:18px 18px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand-row{display:flex; align-items:flex-end; justify-content:space-between; gap:10px;}
+  .brand-title{
+    font-size:34px; line-height:0.85; color:var(--ink);
+  }
+  .brand-title span{color:var(--amber);}
+  .brand-sub{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.14em; color:var(--ink-faint); margin-top:4px;
+  }
+  .total-chip{
+    text-align:right; flex-shrink:0;
+  }
+  .total-chip .num{font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--amber);}
+  .total-chip .lbl{font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:var(--ink-faint);}
+
+  .search-wrap{margin-top:14px; position:relative;}
+  .search-wrap input{
+    width:100%; background:var(--panel); border:1px solid var(--line-strong); color:var(--ink);
+    padding:11px 14px 11px 38px; border-radius:11px; font-size:15px; font-family:inherit;
+    outline:none;
+  }
+  .search-wrap input:focus{border-color:var(--amber);}
+  .search-wrap input::placeholder{color:var(--ink-faint);}
+  .search-icon{
+    position:absolute; left:12px; top:50%; transform:translateY(-50%);
+    width:16px; height:16px; opacity:0.5;
+  }
+
+  .tabs{
+    display:flex; gap:8px; margin-top:12px; overflow-x:auto; padding-bottom:2px;
+    scrollbar-width:none;
+  }
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{
+    flex-shrink:0; padding:9px 15px; border-radius:9px; border:1px solid var(--line-strong);
+    background:var(--panel); color:var(--ink-dim); font-size:12.5px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.05em; font-family:'Inter',sans-serif;
+    display:flex; align-items:center; gap:7px; cursor:pointer; transition:all .15s ease;
+  }
+  .tab-btn .dot{width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.6;}
+  .tab-btn.active{
+    background:var(--amber); border-color:var(--amber); color:#1a1208;
+  }
+  .tab-btn .count{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; opacity:0.75;
+  }
+
+  /* ---------- MAIN ---------- */
+  main{
+    padding:16px 14px 20px;
+    padding-bottom:calc(var(--footer-h) + 24px);
+  }
+
+  .cat-stamp{
+    display:flex; align-items:center; gap:10px;
+    margin:22px 2px 10px;
+  }
+  .cat-stamp:first-child{margin-top:4px;}
+  .cat-stamp .tag{
+    font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.05em;
+    color:var(--ink); white-space:nowrap;
+    border:1.5px solid var(--line-strong); border-radius:7px; padding:3px 12px 1px;
+    transform:rotate(-1deg);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .cat-stamp .tag .qtd-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:18px;
+    color:var(--amber);
+    min-width:30px;
+    text-align:center;
+  }
+  .cat-stamp .rule{flex:1; height:1px; background:repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 11px);}
+  .cat-stamp .unit-hint{
+    font-size:10px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.1em; white-space:nowrap;
+  }
+
+  /* Stepper dentro do título da categoria */
+  .cat-stepper{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin-left:2px;
+  }
+  .cat-stepper button{
+    width:28px;
+    height:28px;
+    border-radius:7px;
+    border:1px solid var(--line-strong);
+    background:var(--bg-2);
+    color:var(--ink);
+    font-size:15px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    user-select:none;
+  }
+  .cat-stepper button:active{
+    background:var(--amber);
+    color:#1a1208;
+    border-color:var(--amber);
+  }
+  .cat-stepper .qty-cat{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:17px;
+    color:var(--amber);
+    min-width:30px;
+    text-align:center;
+  }
+
+  .dist-header{
+    margin:26px 0 4px; padding-top:10px;
+  }
+  .dist-header:first-child{margin-top:0; padding-top:0;}
+  .dist-header .title{
+    font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:0.06em;
+  }
+  .dist-header .title.amb{color:var(--amber);}
+  .dist-header .title.teal{color:var(--teal);}
+  .dist-header .title.rust{color:#e08a6f;}
+
+  .row{
+    display:flex; align-items:center; gap:12px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:13px; padding:10px 10px 10px 12px; margin-bottom:8px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .row.active{border-color:var(--amber); background:var(--panel-2);}
+  .row.hidden{display:none;}
+
+  .icon-wrap{
+    width:30px; height:38px; flex-shrink:0; display:flex; align-items:flex-end; justify-content:center;
+  }
+  .icon-wrap svg{width:100%; height:100%; display:block;}
+
+  .info{flex:1; min-width:0;}
+  .info .name{font-size:14.5px; font-weight:600; line-height:1.25; }
+  .info .unit{font-size:10.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.08em; margin-top:2px;}
+
+  .stepper{display:flex; align-items:center; gap:0; flex-shrink:0;}
+  .stepper button{
+    width:32px; height:32px; border-radius:9px; border:1px solid var(--line-strong);
+    background:var(--bg-2); color:var(--ink); font-size:17px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;
+  }
+  .stepper button:active{background:var(--amber); color:#1a1208; border-color:var(--amber);}
+  .qty{
+    width:44px; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:17px;
+    color:var(--ink); touch-action:none; cursor:ns-resize; user-select:none; position:relative;
+  }
+  .qty.dragging{color:var(--amber);}
+  .qty.gt0{color:var(--amber);}
+
+  .empty-search{
+    text-align:center; padding:60px 20px; color:var(--ink-faint);
+  }
+  .empty-search .display{font-size:22px; color:var(--ink-dim);}
+
+  /* ---------- FOOTER ---------- */
+  footer.bar{
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    background:linear-gradient(0deg, var(--bg-2) 85%, transparent);
+    backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    padding:10px 14px calc(12px + env(safe-area-inset-bottom));
+    display:flex; align-items:center; gap:10px;
+  }
+  .foot-info{flex-shrink:0;}
+  .foot-info .n{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; color:var(--amber);}
+  .foot-info .l{font-size:9px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.1em;}
+  .reset-btn{
+    flex-shrink:0; width:44px; height:44px; border-radius:12px; border:1px solid var(--line-strong);
+    background:var(--panel); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .reset-btn svg{width:18px; height:18px; opacity:0.65;}
+  .btn-group{
+    display:flex; gap:8px; flex:1;
+  }
+  .copy-btn{
+    flex:1; height:48px; border-radius:12px; border:none; background:var(--amber);
+    color:#1a1208; font-weight:800; font-size:13px; letter-spacing:0.02em; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .copy-btn:active{transform:scale(0.98);}
+  .copy-btn svg{width:17px; height:17px;}
+
+  /* toast */
+  #toast{
+    position:fixed; left:50%; bottom:90px; transform:translate(-50%, 20px);
+    background:var(--panel-2); border:1px solid var(--line-strong); color:var(--ink);
+    padding:11px 18px; border-radius:11px; font-size:13.5px; font-weight:600;
+    box-shadow:var(--shadow); z-index:60; opacity:0; pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  #toast.show{opacity:1; transform:translate(-50%, 0);}
+
+  .save-badge{
+    position:fixed;
+    top:80px;
+    right:14px;
+    background:var(--teal);
+    color:#0a1210;
+    font-size:10px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:20px;
+    opacity:0;
+    transition:opacity .3s ease;
+    pointer-events:none;
+    z-index:50;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .save-badge.show{opacity:1;}
+
+  /* ---------- MODAL DE CONFIRMAÇÃO ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; z-index:70;
+    background:rgba(6,10,9,0.72);
+    backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .modal-overlay.show{opacity:1; pointer-events:auto;}
+  .modal-card{
+    width:100%; max-width:340px;
+    background:var(--panel-2); border:1px solid var(--line-strong);
+    border-radius:16px; padding:22px 20px 18px;
+    box-shadow:var(--shadow);
+    transform:scale(0.92) translateY(8px);
+    transition:transform .2s ease;
+  }
+  .modal-overlay.show .modal-card{transform:scale(1) translateY(0);}
+  .modal-icon{
+    width:46px; height:46px; border-radius:50%;
+    background:rgba(207,95,69,0.15); border:1.5px solid var(--rust);
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:14px;
+  }
+  .modal-icon svg{width:22px; height:22px; color:var(--rust);}
+  .modal-title{
+    font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:0.03em;
+    color:var(--ink); margin-bottom:6px;
+  }
+  .modal-text{
+    font-size:13.5px; color:var(--ink-dim); line-height:1.45; margin-bottom:20px;
+  }
+  .modal-text strong{color:var(--ink);}
+  .modal-actions{display:flex; gap:10px;}
+  .modal-cancel, .modal-confirm{
+    flex:1; height:46px; border-radius:11px; font-weight:700; font-size:13.5px;
+    cursor:pointer; border:1px solid var(--line-strong);
+  }
+  .modal-cancel{background:var(--bg-2); color:var(--ink);}
+  .modal-cancel:active{background:var(--panel);}
+  .modal-confirm{background:var(--rust); color:#1a1208; border-color:var(--rust);}
+  .modal-confirm:active{transform:scale(0.98);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+  @media (max-width: 480px){
+    .copy-btn{font-size:11px;}
+    .cat-stamp .tag{font-size:16px; padding:2px 8px 0;}
+    .cat-stamp .tag .qtd-tag{font-size:15px;}
+    .cat-stepper button{width:24px; height:24px; font-size:13px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="save-badge" id="saveBadge">💾 SALVO</div>
+
+<header class="top">
+  <div class="brand-row">
+    <div>
+      <div class="brand-title display">CONTAGEM<br><span>DE ESTOQUE</span></div>
+      <div class="brand-sub">bebidas &amp; distribuidoras</div>
+    </div>
+    <div class="total-chip">
+      <div class="num" id="totalCount">0</div>
+      <div class="lbl">itens contados</div>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="Buscar produto..." autocomplete="off">
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main id="main"></main>
+
+<div id="toast"></div>
+
+<footer class="bar" id="footerBar">
+  <button class="reset-btn" id="resetBtn" title="Zerar tudo" aria-label="Zerar tudo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+  </button>
+  <div class="foot-info">
+    <div class="n" id="footNum">0 cx</div>
+    <div class="l" id="footNum2">0 fd</div>
+  </div>
+  <div class="btn-group">
+    <button class="copy-btn" id="copyBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      COPIAR RELATÓRIO
+    </button>
+  </div>
+</footer>
+
+<!-- Icon templates -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="ic-garrafa" viewBox="0 0 24 32">
+      <path d="M9 1h6v4.2c0 .9.35 1.4 1 2.1C17.3 8.7 18 10 18 12.5V29a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V12.5c0-2.5.7-3.8 2-5.2.65-.7 1-1.2 1-2.1V1z" fill="currentColor" opacity="0.9"/>
+      <rect x="9" y="1" width="6" height="3" fill="currentColor" opacity="0.55"/>
+      <rect x="6.3" y="18" width="11.4" height="6" fill="#0a1210" opacity="0.18"/>
+    </symbol>
+    <symbol id="ic-lata" viewBox="0 0 24 32">
+      <path d="M5 6.5C5 5.1 8.1 4 12 4s7 1.1 7 2.5v20c0 1.4-3.1 2.5-7 2.5s-7-1.1-7-2.5v-20z" fill="currentColor" opacity="0.9"/>
+      <ellipse cx="12" cy="6.5" rx="7" ry="2.3" fill="currentColor" opacity="0.55"/>
+      <rect x="5" y="15" width="14" height="5" fill="#0a1210" opacity="0.16"/>
+    </symbol>
+    <symbol id="ic-pet" viewBox="0 0 24 32">
+      <path d="M10 1h4v3.4c0 .5.2.7.6 1.05C15.6 6.3 17 7.5 17 10.5V29a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V10.5c0-3 1.4-4.2 2.4-5.05.4-.35.6-.55.6-1.05V1z" fill="currentColor" opacity="0.85"/>
+      <rect x="10" y="1" width="4" height="2.6" fill="currentColor" opacity="0.5"/>
+      <rect x="7" y="20" width="10" height="7" fill="#0a1210" opacity="0.14"/>
+    </symbol>
+  </defs>
+</svg>
+
+<script>
+/* ============ DADOS ============ */
+const DATA = [
+  { id:'ambev', nome:'Ambev', cor:'amb',
+    categorias:[
+      { 
+        nome:'Litrinho Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Litrinho Vazio',
+        produtos:[
+          ['Antártica','cx','garrafa'],
+          ['Bohemia','cx','garrafa'],
+          ['Budweiser','cx','garrafa'],
+          ['Brahma','cx','garrafa'],
+          ['Brahma Duplo Malte','cx','garrafa'],
+          ['Original','cx','garrafa'],
+          ['Skol','cx','garrafa']
+        ]
+      },
+      { 
+        nome:'Garrafa 600ml Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Garrafa 600ml Vazio',
+        produtos:[
+          ['Stella Puro Gold 600ml','cx','garrafa'],
+          ['Corona Extra 600ml','cx','garrafa'],
+          ['Stella Artois 600ml','cx','garrafa'],
+          ['Spaten 600ml','cx','garrafa'],
+          ['Original 600ml','cx','garrafa'],
+          ['Budweiser 600ml','cx','garrafa'],
+          ['Bohemia 600ml','cx','garrafa'],
+          ['Skol 600ml','cx','garrafa'],
+          ['Brahma 600ml','cx','garrafa'],
+          ['Brahma Duplo Malte 600ml','cx','garrafa'],
+          ['Antártica 600ml','cx','garrafa'],
+          ['Colorado Ribeirão Lager 600ml','cx','garrafa'],
+          ['Wals Lagoinha 600ml','cx','garrafa'],
+          ['XWals 600ml','cx','garrafa']
+        ]
+      },
+      { 
+        nome:'Litrão 1L Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Litrão 1L Vazio',
+        produtos:[
+          ['Antártica 1L','cx','garrafa'],
+          ['Boêmia 1L','cx','garrafa'],
+          ['Brahma 1L','cx','garrafa'],
+          ['Original 1L','cx','garrafa'],
+          ['Skol 1L','cx','garrafa'],
+          ['Budweiser 1L','cx','garrafa'],
+          ['Brahma Duplo Malte 1L','cx','garrafa']
+        ]
+      },
+      { nome:'Latão (350ml / 473ml)', produtos:[
+        ['Antarctica Boa 473ml','fd','lata'],
+        ['Antarctica Sub Zero 473ml','fd','lata'],
+        ['Bohemia 473ml','fd','lata'],
+        ['Brahma 350ml','fd','lata'],
+        ['Brahma 473ml','fd','lata'],
+        ['Brahma Zero 350ml','fd','lata'],
+        ['Brahma Zero 473ml','fd','lata'],
+        ['Brahma Duplo Malte 350ml','fd','lata'],
+        ['Brahma Duplo Malte 473ml','fd','lata'],
+        ['Budweiser 350ml','fd','lata'],
+        ['Budweiser Zero 350ml','fd','lata'],
+        ['Budweiser 473ml','fd','lata'],
+        ['Caracu 350ml','fd','lata'],
+        ['Corona 350ml','fd','lata'],
+        ['Michelob 350ml','fd','lata'],
+        ['Original 350ml','fd','lata'],
+        ['Original 473ml','fd','lata'],
+        ['Skol 350ml','fd','lata'],
+        ['Skol 473ml','fd','lata'],
+        ['Spaten 350ml','fd','lata'],
+        ['Spaten 473ml','fd','lata'],
+        ['Stella Artois 350ml','fd','lata'],
+        ['Stella Artois 473ml','fd','lata'],
+        ['Corona 473ml','fd','lata'],
+        ['Flying Fish 350ml','fd','lata'],
+        ['Budweiser Zero 473ml','fd','lata'],
+        ['Stella Puro Gold 473ml','fd','lata'],
+        ['Skol Zero 350ml','fd','lata']
+      ]},
+      { nome:'Long Neck', produtos:[
+        ['Michelob 330ml','fd','garrafa'],
+        ['Stella Puro Gold 330ml','fd','garrafa'],
+        ['Corona Zero 330ml','fd','garrafa'],
+        ['Budweiser Zero 330ml','fd','garrafa'],
+        ['Brahma Zero 355ml','fd','garrafa'],
+        ['Spaten 330ml','fd','garrafa'],
+        ['Budweiser 300ml','fd','garrafa'],
+        ['Coronita 210ml','fd','garrafa'],
+        ['Flying Fish 330ml','fd','garrafa'],
+        ['Malzbier 355ml','fd','garrafa'],
+        ['Colorado Ribeirão Lager 355ml','fd','garrafa'],
+        ['Stella Artois 330ml','fd','garrafa'],
+        ['Brahma 355ml','fd','garrafa']
+      ]},
+      { nome:'Refrigerantes Pet', produtos:[
+        ['Guaraná Antarctica 200ml','fd','pet'],
+        ['Guaraná Antarctica 1L','fd','pet'],
+        ['Guaraná Antarctica 2L','fd','pet'],
+        ['Guaraná Antarctica Zero 200ml','fd','pet'],
+        ['Guaraná Antarctica Zero 2L','fd','pet'],
+        ['H2OH! Tradicional 500ml','fd','pet'],
+        ['H2OH! Tradicional 1,5L','fd','pet'],
+        ['H2OH! Limoneto 500ml','fd','pet'],
+        ['H2OH! Limoneto 1,5L','fd','pet'],
+        ['Pepsi 200ml','fd','pet'],
+        ['Pepsi 1L','fd','pet'],
+        ['Pepsi 2L','fd','pet'],
+        ['Pepsi Black 200ml','fd','pet'],
+        ['Pepsi Black 1L','fd','pet'],
+        ['Pepsi Black 2L','fd','pet'],
+        ['Pepsi Twist 200ml','fd','pet'],
+        ['Pepsi Twist 2L','fd','pet'],
+        ['Soda 200ml','fd','pet'],
+        ['Soda 1L','fd','pet'],
+        ['Soda 2L','fd','pet'],
+        ['Sukita Laranja 200ml','fd','pet'],
+        ['Sukita Laranja 1L','fd','pet'],
+        ['Sukita Laranja 2L','fd','pet'],
+        ['Sukita Limão 200ml','fd','pet'],
+        ['Sukita Limão 2L','fd','pet'],
+        ['Sukita Uva 200ml','fd','pet'],
+        ['Água Tônica Antarctica','fd','pet'],
+        ['Fusion 1L','fd','pet'],
+        ['Fusion 2L','fd','pet']
+      ]},
+      { nome:'Refrigerantes Lata', produtos:[
+        ['Red Bull 250ml','fd','lata'],
+        ['Red Bull 473ml','fd','lata'],
+        ['Red Bull Melancia 250ml','fd','lata'],
+        ['Red Bull Sugar Free 250ml','fd','lata'],
+        ['Red Bull Tropical 250ml','fd','lata'],
+        ['Guaraná 350ml','fd','lata'],
+        ['Guaraná Zero 350ml','fd','lata'],
+        ['Pepsi 350ml','fd','lata'],
+        ['Pepsi Black 350ml','fd','lata'],
+        ['Soda 300ml','fd','lata'],
+        ['Sukita 350ml','fd','lata'],
+        ['Red Bull Sugar Free Pomelo 250ml','fd','lata'],
+        ['Red Bull Zero 250ml','fd','lata'],
+        ['H2O 350ml','fd','lata']
+      ]},
+      { nome:'Beats', produtos:[
+        ['Beats Green Mix 269ml','fd','lata'],
+        ['Beats Red Mix 269ml','fd','lata'],
+        ['Beats Senses 269ml','fd','lata'],
+        ['Beats GT 269ml','fd','lata'],
+        ['Beats Tropical 269ml','fd','lata'],
+        ['Beats Senses 473ml','fd','lata'],
+        ['Beats Senses Pet 1L','fd','pet']
+      ]},
+      { nome:'Beats Long', produtos:[
+        ['Beats GT','fd','garrafa'],
+        ['Beats Senses 269ml','fd','garrafa'],
+        ['Beats Tropical 269ml','fd','garrafa'],
+        ['Beats Green 269ml','fd','garrafa'],
+        ['Beats Red Mix 269ml','fd','garrafa']
+      ]},
+      { nome:'Miks / Frutal', produtos:[
+        ['Miks Long 275ml','fd','garrafa'],
+        ['Miks Lata 269ml','fd','lata'],
+        ['Frutal Long 275ml','fd','garrafa'],
+        ['Frutal Lata 269ml','fd','lata']
+      ]},
+      { nome:'Águas e Sucos', produtos:[
+        ['Gatorade Blue Berry 500ml','fd','pet'],
+        ['Gatorade Limão 500ml','fd','pet'],
+        ['Gatorade Uva 500ml','fd','pet'],
+        ['Gatorade Morango Maracujá 500ml','fd','pet'],
+        ['Gatorade Laranja 500ml','fd','pet'],
+        ['Gatorade Tangerina 500ml','fd','pet'],
+        ['Gatorade Zero 500ml','fd','pet'],
+        ['Água 500ml','fd','pet'],
+        ['Água 1,5L','fd','pet'],
+        ['Suco Tial Uva 1L','fd','pet'],
+        ['Suco Tial Pêssego 1L','fd','pet'],
+        ['Água de Coco 1L','fd','pet']
+      ]}
+    ]
+  },
+  { id:'novasimpra', nome:'Nova Simpra', cor:'teal',
+    categorias:[
+      { 
+        nome:'Litrinho Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Litrinho Vazio',
+        produtos:[]
+      },
+      { 
+        nome:'Garrafa 600ml Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Garrafa 600ml Vazio',
+        produtos:[]
+      },
+      { 
+        nome:'Litrão 1L Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Litrão 1L Vazio',
+        produtos:[]
+      },
+      { nome:'Refrigerantes / Outras Marcas', produtos:[
+        ['IT 2L','fd','pet']
+      ]},
+      { nome:'Latão 473ml', produtos:[
+        ['Imperial 473ml','fd','lata'],
+        ['Heineken 473ml','fd','lata']
+      ]},
+      { nome:'Mega Latão', produtos:[
+        ['Itaipava Mega','fd','lata']
+      ]}
+    ]
+  },
+  { id:'nova geracao', nome:'Nova Geração', cor:'rust',
+    categorias:[
+      { 
+        nome:'Litrinho Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Litrinho Vazio',
+        produtos:[]
+      },
+      { 
+        nome:'Garrafa 600ml Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Garrafa 600ml Vazio',
+        produtos:[]
+      },
+      { 
+        nome:'Litrão 1L Vazio', 
+        isCategoriaContavel: true,
+        nomeExibicao: 'Litrão 1L Vazio',
+        produtos:[]
+      },
+      { nome:'Refrigerantes e Linha Não-Alcoólica', produtos:[
+        ['Coca-Cola Tradicional 2L','fd','pet'],
+        ['Coca-Cola Sem Açúcar (Zero) 2L','fd','pet'],
+        ['Coca-Cola Tradicional 1L','fd','pet'],
+        ['Coca-Cola Descartável 600ml','fd','pet'],
+        ['Coca-Cola Lata 350ml','fd','lata'],
+        ['Coca-Cola Latão 473ml','fd','lata'],
+        ['Coca-Cola 3L (Pet)','fd','pet'],
+        ['Fanta Laranja 2L','fd','pet'],
+        ['Fanta Uva 2L','fd','pet'],
+        ['Fanta Guaraná 2L','fd','pet'],
+        ['Fanta Laranja Lata 350ml','fd','lata'],
+        ['Sprite 2L','fd','pet'],
+        ['Sprite Lata 350ml','fd','lata'],
+        ['Schweppes Citrus / Tonic 1,5L / Lata','fd','pet'],
+        ['Kuat 2L','fd','pet']
+      ]},
+      { nome:'Águas, Chás e Isotônicos', produtos:[
+        ['Crystal Sem Gás 500ml','fd','pet'],
+        ['Crystal Com Gás 500ml','fd','pet'],
+        ['Crystal 1,5L','fd','pet'],
+        ['Monster Energy (Tradicional / Green / Ultra)','fd','lata'],
+        ['Burn Energy Drink','fd','lata'],
+        ['Matte Leão (Pronto para beber / caixinhas / garrafas)','fd','pet'],
+        ['Powerade (Sabores)','fd','pet']
+      ]},
+      { nome:'Cervejas e Portfólio de Álcool (Parcerias)', produtos:[
+        ['Heineken 600ml','cx','garrafa'],
+        ['Heineken 330ml (Long Neck)','fd','garrafa'],
+        ['Heineken 473ml','fd','lata'],
+        ['Amstel 600ml','cx','garrafa'],
+        ['Amstel 473ml','fd','lata'],
+        ['Eisenbahn Pilsen 600ml','cx','garrafa'],
+        ['Eisenbahn Pilsen 473ml','fd','lata'],
+        ['Tiger 473ml','fd','lata']
+      ]}
+    ]
+  }
+];
+
+/* ============ ESTADO ============ */
+const state = {};
+
+// Chaves especiais para categorias contáveis
+const CAT_KEYS = {
+  'Litrinho Vazio': 'litrinho_vazio',
+  'Litrão 1L Vazio': 'litrao_1l_vazio',
+  'Garrafa 600ml Vazio': 'garrafa_600ml_vazio'
+};
+
+DATA.forEach(dist=>{
+  dist.categorias.forEach(cat=>{
+    if(cat.isCategoriaContavel){
+      const key = dist.id + '_' + CAT_KEYS[cat.nome];
+      state[key] = 0;
+    }
+    cat.produtos.forEach(p=>{
+      const id = slug(dist.id+'-'+cat.nome+'-'+p[0]);
+      p[3] = id;
+      state[id] = 0;
+    });
+  });
+});
+
+function slug(s){
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+}
+
+let activeTab = DATA[0].id;
+
+/* ============ LOCAL STORAGE ============ */
+function salvarEstado(){
+  try {
+    localStorage.setItem('estoque_contagem', JSON.stringify(state));
+    const badge = document.getElementById('saveBadge');
+    badge.classList.add('show');
+    clearTimeout(badge._timer);
+    badge._timer = setTimeout(()=> badge.classList.remove('show'), 1500);
+  } catch(e) {}
+}
+
+function carregarEstado(){
+  try {
+    const data = localStorage.getItem('estoque_contagem');
+    if(data){
+      const parsed = JSON.parse(data);
+      Object.keys(parsed).forEach(key=>{
+        if(state.hasOwnProperty(key)){
+          state[key] = parsed[key];
+        }
+      });
+    }
+  } catch(e) {}
+}
+
+carregarEstado();
+
+/* ============ AJUSTE DINÂMICO DO RODAPÉ ============ */
+function ajustarEspacoRodape(){
+  const footer = document.getElementById('footerBar');
+  if(!footer) return;
+  const altura = footer.getBoundingClientRect().height;
+  document.documentElement.style.setProperty('--footer-h', altura + 'px');
+}
+
+window.addEventListener('load', ajustarEspacoRodape);
+window.addEventListener('resize', ajustarEspacoRodape);
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', ajustarEspacoRodape);
+}
+
+/* ============ RENDER ============ */
+const tabsEl = document.getElementById('tabs');
+const mainEl = document.getElementById('main');
+const searchInput = document.getElementById('searchInput');
+
+function getTotalCategoriaCompleto(cat, distId){
+  let total = cat.produtos.reduce((s, p) => s + state[p[3]], 0);
+  if(cat.isCategoriaContavel){
+    const key = distId + '_' + CAT_KEYS[cat.nome];
+    total += state[key] || 0;
+  }
+  return total;
+}
+
+function renderTabs(){
+  tabsEl.innerHTML = DATA.map(d=>{
+    const total = d.categorias.reduce((s,c)=>s + getTotalCategoriaCompleto(c, d.id), 0);
+    return `<button class="tab-btn ${d.id===activeTab?'active':''}" data-tab="${d.id}">
+      <span class="dot"></span>${d.nome}<span class="count">${total>0? '· '+total : ''}</span>
+    </button>`;
+  }).join('');
+  tabsEl.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      activeTab = btn.dataset.tab;
+      searchInput.value='';
+      renderTabs();
+      renderMain();
+    });
+  });
+}
+
+function renderMain(){
+  const query = searchInput.value.trim().toLowerCase();
+
+  if(query){
+    let html = '';
+    let found = 0;
+    DATA.forEach(dist=>{
+      let distHtml = '';
+      dist.categorias.forEach(cat=>{
+        const matches = cat.produtos.filter(p=>p[0].toLowerCase().includes(query));
+        if(matches.length===0) return;
+        distHtml += `<div class="cat-stamp"><span class="tag display">${cat.nome}</span><span class="rule"></span></div>`;
+        matches.forEach(p=> distHtml += rowHtml(p));
+        found += matches.length;
+      });
+      if(distHtml){
+        html += `<div class="dist-header"><span class="title display ${dist.cor}">${dist.nome}</span></div>` + distHtml;
+      }
+    });
+    mainEl.innerHTML = found ? html : `<div class="empty-search"><div class="display">nada encontrado</div><div style="margin-top:6px; font-size:13px;">tente outro termo de busca</div></div>`;
+  } else {
+    const dist = DATA.find(d=>d.id===activeTab);
+    let html = '';
+    dist.categorias.forEach(cat=>{
+      const total = getTotalCategoriaCompleto(cat, dist.id);
+      const key = dist.id + '_' + CAT_KEYS[cat.nome];
+      const hasStepper = cat.isCategoriaContavel && CAT_KEYS[cat.nome];
+      
+      const nomeExibicao = cat.nomeExibicao || cat.nome;
+      
+      let catHeader = `<div class="cat-stamp"><span class="tag display">`;
+      
+      if(hasStepper){
+        // Categorias contáveis mostram a quantidade com stepper
+        catHeader += `${nomeExibicao} `;
+        catHeader += `<span class="qtd-tag" id="cat-qtd-${key}">${state[key] || 0}</span>`;
+        catHeader += `<span class="cat-stepper">
+          <button class="cat-dec" data-key="${key}">−</button>
+          <button class="cat-inc" data-key="${key}">+</button>
+        </span>`;
+      } else {
+        catHeader += `${nomeExibicao}`;
+      }
+      
+      catHeader += `</span><span class="rule"></span><span class="unit-hint">${cat.produtos.length > 0 ? cat.produtos[0][1] : ''}</span></div>`;
+      html += catHeader;
+      
+      cat.produtos.forEach(p=> html += rowHtml(p));
+    });
+    mainEl.innerHTML = html;
+  }
+
+  attachRowEvents();
+  attachCatEvents();
+  ajustarEspacoRodape();
+}
+
+function rowHtml(p){
+  const [nome, unidade, tipo, id] = p;
+  const qty = state[id];
+  return `<div class="row ${qty>0?'active':''}" data-id="${id}">
+    <div class="icon-wrap" style="color:${iconColor(tipo)}"><svg><use href="#ic-${tipo}"/></svg></div>
+    <div class="info">
+      <div class="name">${nome}</div>
+      <div class="unit">${unidade === 'cx' ? 'caixa' : 'fardo'}</div>
+    </div>
+    <div class="stepper">
+      <button class="dec" aria-label="Diminuir">−</button>
+      <div class="qty ${qty>0?'gt0':''}" data-id="${id}">${qty}</div>
+      <button class="inc" aria-label="Aumentar">+</button>
+    </div>
+  </div>`;
+}
+
+function iconColor(tipo){
+  if(tipo==='garrafa') return 'var(--amber)';
+  if(tipo==='lata') return '#c9ccd1';
+  return 'var(--teal)';
+}
+
+/* ============ EVENTOS DOS PRODUTOS ============ */
+function attachRowEvents(){
+  mainEl.querySelectorAll('.row').forEach(row=>{
+    const id = row.dataset.id;
+    const qtyEl = row.querySelector('.qty');
+    const decBtn = row.querySelector('.dec');
+    const incBtn = row.querySelector('.inc');
+
+    decBtn.addEventListener('click', ()=> changeQty(id, -1, row, qtyEl));
+    incBtn.addEventListener('click', ()=> changeQty(id, 1, row, qtyEl));
+
+    let dragging = false, startY = 0, startVal = 0, accum = 0;
+    const STEP_PX = 22;
+
+    qtyEl.addEventListener('pointerdown', (e)=>{
+      dragging = true;
+      startY = e.clientY;
+      startVal = state[id];
+      accum = 0;
+      qtyEl.classList.add('dragging');
+      qtyEl.setPointerCapture(e.pointerId);
+    });
+    qtyEl.addEventListener('pointermove', (e)=>{
+      if(!dragging) return;
+      const deltaY = startY - e.clientY;
+      const steps = Math.trunc(deltaY / STEP_PX);
+      if(steps !== accum){
+        accum = steps;
+        const newVal = Math.max(0, startVal + steps);
+        setQty(id, newVal, row, qtyEl);
+      }
+    });
+    const endDrag = (e)=>{
+      if(!dragging) return;
+      dragging = false;
+      qtyEl.classList.remove('dragging');
+      try{ qtyEl.releasePointerCapture(e.pointerId); }catch(err){}
+    };
+    qtyEl.addEventListener('pointerup', endDrag);
+    qtyEl.addEventListener('pointercancel', endDrag);
+  });
+}
+
+function changeQty(id, delta, row, qtyEl){
+  setQty(id, Math.max(0, state[id]+delta), row, qtyEl);
+}
+
+function setQty(id, val, row, qtyEl){
+  state[id] = val;
+  qtyEl.textContent = val;
+  qtyEl.classList.toggle('gt0', val>0);
+  row.classList.toggle('active', val>0);
+  updateTotals();
+  salvarEstado();
+}
+
+/* ============ EVENTOS DAS CATEGORIAS ============ */
+function attachCatEvents(){
+  mainEl.querySelectorAll('.cat-dec, .cat-inc').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const key = btn.dataset.key;
+      const delta = btn.classList.contains('cat-dec') ? -1 : 1;
+      const newVal = Math.max(0, (state[key] || 0) + delta);
+      state[key] = newVal;
+      
+      const qtdEl = document.getElementById('cat-qtd-' + key);
+      if(qtdEl) qtdEl.textContent = newVal;
+      
+      updateTotals();
+      salvarEstado();
+    });
+  });
+}
+
+function updateTotals(){
+  let totalItens = 0, totalCx = 0, totalFd = 0;
+  DATA.forEach(dist=>{
+    dist.categorias.forEach(cat=>{
+      cat.produtos.forEach(p=>{
+        const q = state[p[3]];
+        if(q>0){
+          totalItens++;
+          if(p[1]==='cx') totalCx += q; else totalFd += q;
+        }
+      });
+      if(cat.isCategoriaContavel){
+        const key = dist.id + '_' + CAT_KEYS[cat.nome];
+        const q = state[key] || 0;
+        if(q>0){
+          totalItens++;
+          totalCx += q;
+        }
+      }
+    });
+  });
+  document.getElementById('totalCount').textContent = totalItens;
+  document.getElementById('footNum').textContent = totalCx + ' cx';
+  document.getElementById('footNum2').textContent = totalFd + ' fd';
+  renderTabs();
+}
+
+searchInput.addEventListener('input', renderMain);
+
+/* ============ RESET ============ */
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  const totalItens = Object.values(state).filter(v=>v>0).length;
+  if(totalItens===0) return;
+  if(confirm('Zerar todas as quantidades contadas?')){
+    Object.keys(state).forEach(k=> state[k]=0);
+    renderMain();
+    updateTotals();
+    salvarEstado();
+    showToast('Contagem zerada');
+  }
+});
+
+/* ============ GERAR RELATÓRIO ============ */
+function gerarRelatorioDistribuidora(){
+  const dist = DATA.find(d=>d.id===activeTab);
+  if(!dist) return '';
+
+  const agora = new Date();
+  const data = agora.toLocaleDateString('pt-BR');
+  const hora = agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+
+  let out = [];
+  out.push('📊 *CONTAGEM DE ESTOQUE*');
+  out.push('📅 ' + data + ' às ' + hora);
+  out.push('🏢 *' + dist.nome.toUpperCase() + '*');
+  out.push('');
+
+  let totalCx = 0, totalFd = 0;
+
+  dist.categorias.forEach(cat=>{
+    let items = [];
+    const nomeExibicao = cat.nomeExibicao || cat.nome;
+    
+    if(cat.isCategoriaContavel){
+      const key = dist.id + '_' + CAT_KEYS[cat.nome];
+      const q = state[key] || 0;
+      if(q > 0) totalCx += q;
+      
+      const titulo = `*${nomeExibicao} ${q} cx*`;
+      out.push(titulo);
+      
+      cat.produtos.forEach(p=>{
+        const qProd = state[p[3]];
+        const unidade = p[1] === 'cx' ? 'cx' : 'fd';
+        if(qProd > 0) {
+          if(p[1] === 'cx') totalCx += qProd;
+          else totalFd += qProd;
+        }
+        const qtdStr = String(qProd).padStart(3, ' ');
+        items.push('   ' + qtdStr + '  ' + unidade + '  ' + p[0]);
+      });
+      
+      if(items.length > 0){
+        out.push(items.join('\n'));
+      }
+      out.push('');
+    } else {
+      cat.produtos.forEach(p=>{
+        const q = state[p[3]];
+        const unidade = p[1] === 'cx' ? 'cx' : 'fd';
+        if(q > 0) {
+          if(p[1] === 'cx') totalCx += q;
+          else totalFd += q;
+        }
+        const qtdStr = String(q).padStart(3, ' ');
+        items.push('   ' + qtdStr + '  ' + unidade + '  ' + p[0]);
+      });
+
+      if(items.length > 0){
+        out.push(`*${nomeExibicao}*`);
+        out.push(items.join('\n'));
+        out.push('');
+      }
+    }
+  });
+
+  out.push('━'.repeat(40));
+  out.push('📦 *TOTAL*');
+  out.push('   ' + String(totalCx).padStart(3, ' ') + ' caixa(s)  ·  ' + String(totalFd).padStart(3, ' ') + ' fardo(s)');
+  out.push('━'.repeat(40));
+
+  return out.join('\n');
+}
+
+/* ============ COPIAR ============ */
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  const texto = gerarRelatorioDistribuidora();
+  navigator.clipboard.writeText(texto).then(()=>{
+    showToast('Relatório copiado para a área de transferência!');
+  }).catch(()=>{
+    const textarea = document.createElement('textarea');
+    textarea.value = texto;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showToast('Relatório copiado para a área de transferência!');
+  });
+});
+
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2600);
+}
+
+/* ============ INIT ============ */
+renderTabs();
+renderMain();
+ajustarEspacoRodape();
+</script>
+</body>
+</html>
